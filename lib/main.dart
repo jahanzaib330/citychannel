@@ -1,7 +1,9 @@
-
-import 'package:citychannel/Admin/Firebase_auth/Admin_Login.dart';
-import 'package:citychannel/User/Order_Booking.dart';
+import 'package:citychannel/User/Firebase_Firestore/Order_Booking.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'Providers/user_provider.dart';
+import 'User/Firebase_Auth/User_Login.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,9 +19,14 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: OrderBooking() ,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: UserLogin() ,
+      ),
     );
   }
 }
