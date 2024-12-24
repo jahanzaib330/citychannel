@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "832097821716",
+    "project_id": "citychannel-bb5b5",
+    "storage_bucket": "citychannel-bb5b5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:832097821716:android:06bbe09d989887fb073301",
+        "android_client_info": {
+          "package_name": "com.example.citychannel"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTHZWLVT8qMKhr4fH24CwVzDWM2qSwxMM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
