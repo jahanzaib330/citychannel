@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../Models/user_model.dart';
 import '../../Providers/user_provider.dart';
 import 'Detail_Screen.dart';
@@ -80,6 +81,16 @@ class _OrderBookingState extends State<OrderBooking> {
   Widget build(BuildContext context) {
     final user = Provider.of<UserProvider>(context).user;
 
+    Future<void> logout() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', false);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const UserLogin()),
+      );
+    }
+
+
     return Scaffold(
       backgroundColor: Colors.blueAccent,
       appBar: AppBar(
@@ -133,19 +144,13 @@ class _OrderBookingState extends State<OrderBooking> {
               title: const Text("Delete Order"),
               onTap: () {},
             ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text("Logout"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const UserLogin(),
-                  ),
-                );
-              },
-            ),
-          ],
+      ListTile(
+        leading: const Icon(Icons.logout),
+        title: const Text("Logout"),
+        onTap: logout
+      )
+
+      ],
         ),
       ),
       body: SingleChildScrollView(
