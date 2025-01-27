@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:citychannel/Models/product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../Models/customer_model.dart';
 import '../../Models/order_model.dart';
@@ -10,6 +13,9 @@ import '../Firebase_Auth/User_Login.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+
+import 'Fetch_Order.dart';
+import 'Order_Booking.dart';
 
 class DetailScreen extends StatefulWidget {
   final UserModel user;
@@ -22,6 +28,8 @@ class DetailScreen extends StatefulWidget {
 
 class _DetailScreenState extends State<DetailScreen> {
   final _formKey = GlobalKey<FormState>();
+  late Timer _timer;
+  String currentDate = "";
 
   final TextEditingController bookerName = TextEditingController();
   final TextEditingController newCode = TextEditingController();
@@ -36,8 +44,9 @@ class _DetailScreenState extends State<DetailScreen> {
   final TextEditingController latitute = TextEditingController();
   final TextEditingController longitute = TextEditingController();
 
+
   String? currentAddress = "Fetching location...";
-  String currentDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+  // String currentDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
   late Future<ProductModel> futureProducts;
   late Future<CustomerModel> futureCustomers;
   String? selectedProduct;
@@ -126,7 +135,7 @@ class _DetailScreenState extends State<DetailScreen> {
   void initState() {
     super.initState();
     bookerName.text = widget.user.bookerName;
-    newCode.text = widget.user.bookerCode.toString();
+    newCode.text = widget.user.newcode.toString();
     getCurrentLocation();
     futureProducts = fetchProducts();
     futureCustomers = fetchCustomers();
@@ -134,8 +143,8 @@ class _DetailScreenState extends State<DetailScreen> {
     futureData = fetchData();
   }
 
-  late Future<CodeModel> futureData;
-  Future<CodeModel> fetchData() async {
+  late Future<OrderModel> futureData;
+  Future<OrderModel> fetchData() async {
     const url = 'http://localhost/City_Channel_AdminPanel/City_Admin/City_Channel_Api/Order/fetch_order.php';
 
     try {
@@ -143,7 +152,8 @@ class _DetailScreenState extends State<DetailScreen> {
 
       if (response.statusCode == 200) {
         final jsonResponse = json.decode(response.body);
-        return CodeModel.fromJson(jsonResponse);
+        print(jsonResponse);
+        return OrderModel.fromJson(jsonResponse);
       } else {
         throw Exception('Failed to load data');
       }
@@ -218,35 +228,33 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   void _updateDateTime() {
-    setState(() {
-      currentDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    // Initialize the timer to update the date and time every second
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      });
     });
-    Future.delayed(Duration(seconds: 1), _updateDateTime);
   }
+  @override
+  void dispose() {
+    // Cancel the timer when the widget is disposed
+    _timer.cancel();
+    super.dispose();
+  }
+  Future<void> logout() async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const UserLogin()),
+      );
+    }
 
-  // void _addItem() {
-  //   if (_formKey.currentState!.validate()) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Item added successfully!'),
-  //         backgroundColor: Colors.green,
-  //       ),
-  //     );
-  //     customercode.clear();
-  //     Customer.clear();
-  //     productcode.clear();
-  //     product.clear();
-  //     price.clear();
-  //     qty.clear();
-  //     bonus.clear();
-  //     discount.clear();
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueAccent,
+     backgroundColor: Colors.blueAccent,
       appBar: AppBar(
         title: Text(
           "Book Order",
@@ -277,35 +285,41 @@ class _DetailScreenState extends State<DetailScreen> {
               leading: const Icon(Icons.home),
               title: const Text("Home"),
               onTap: () {
-                // Handle Home navigation
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrderBooking()),
+                );
               },
             ),
             ListTile(
               leading: const Icon(Icons.production_quantity_limits),
               title: const Text("Product List"),
-              onTap: () {
-                // Handle Product List navigation
-              },
+              onTap: () {},
             ),
             ListTile(
               leading: const Icon(Icons.book),
               title: const Text("Order Summary"),
               onTap: () {
-                // Handle Order Summary navigation
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text("Logout"),
-              onTap: () {
-                Navigator.push(
+                Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const UserLogin(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const FetchOrder()),
                 );
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.upload),
+              title: const Text("Upload Order"),
+              onTap: () {},
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text("Delete Order"),
+              onTap: () {},
+            ),
+            ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text("Logout"),
+                onTap: logout)
           ],
         ),
       ),
@@ -387,146 +401,136 @@ class _DetailScreenState extends State<DetailScreen> {
                         Row(
                           children: [
                             FutureBuilder<CustomerModel>(
-                              future: futureCustomers,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const Center(
-                                      child: CircularProgressIndicator());
-                                } else if (snapshot.hasError) {
-                                  return Center(
-                                      child: Text('Error: ${snapshot.error}'));
-                                }
-                                else if (!snapshot.hasData ||
-                                snapshot.data!.customers == null) {
-                                  return const Center(
-                                      child: Text('No Customers Available'));
-                                } else {
-                                  // Ensure the data is not null and contains customers
-                                  List<Customers> customers =
-                                      snapshot.data!.customers !;
-                                  List<Customers> filteredCustomers =
-                                      List.from(customers);
+                            future: futureCustomers,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              } else if (snapshot.hasError) {
+                                return Center(
+                                    child: Text('Error: ${snapshot.error}'));
+                              } else {
+                                // Ensure the data is not null and contains customers
+                                List<Customers> customers =
+                                    snapshot.data?.customers ?? [];
+                                List<Customers> filteredCustomers =
+                                    List.from(customers);
 
-                                  return Expanded(
-                                    child: DropdownButtonHideUnderline(
-                                      child: SizedBox(
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                                0.33,
-                                        child: StatefulBuilder(
-                                          builder: (context, setInnerState) {
-                                            return DropdownButton2<String>(
-                                              isExpanded: true,
-                                              hint: Text(
-                                                'Select',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context)
-                                                      .hintColor,
-                                                ),
+                                return Expanded(
+                                  child: DropdownButtonHideUnderline(
+                                    child: SizedBox(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.33,
+                                      child: StatefulBuilder(
+                                        builder: (context, setInnerState) {
+                                          return DropdownButton2<String>(
+                                            isExpanded: true,
+                                            hint: Text(
+                                              'Select',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color:
+                                                    Theme.of(context).hintColor,
                                               ),
-                                              items:
-                                                  filteredCustomers.map((item) {
-                                                return DropdownMenuItem<String>(
-                                                  value: '${item.customerName} ${item.customerAddress}' ,
-                                                  child: Text(
-                                                    '${item.customerName!} ${item.customerAddress!}',
-                                                    style: const TextStyle(
-                                                        fontSize: 14),
-                                                  ),
+                                            ),
+                                            items:
+                                                filteredCustomers.map((item) {
+                                              return DropdownMenuItem<String>(
+                                                value: item.customerName,
+                                                child: Text(
+                                                  item.customerName!,
+                                                  style: const TextStyle(
+                                                      fontSize: 14),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            value: selectCustomer,
+                                            onChanged: (value) {
+                                              setState(() {
+                                                selectCustomer = value;
+                                                Customers selectedItem =
+                                                    customers.firstWhere(
+                                                  (c) =>
+                                                      c.customerName == value,
                                                 );
-                                              }).toList(),
-                                              value: selectCustomer,
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  selectCustomer = value;
-                                                  Customers selectedItem =
-                                                      customers.firstWhere(
-                                                    (c) =>
-                                                        c.customerName == value,
-                                                  );
-                                                  customerCode.text =
-                                                      selectedItem
-                                                          .customerCode!;
-                                                });
-                                              },
-                                              buttonStyleData:
-                                                  const ButtonStyleData(
-                                                width: double.infinity,
-                                                decoration: BoxDecoration(
-                                                  border: Border(
-                                                    bottom: BorderSide(
-                                                        color: Colors.grey),
-                                                  ),
+                                                customerCode.text =
+                                                    selectedItem.customerCode!;
+                                              });
+                                            },
+                                            buttonStyleData:
+                                                const ButtonStyleData(
+                                              width: double.infinity,
+                                              decoration: BoxDecoration(
+                                                border: Border(
+                                                  bottom: BorderSide(
+                                                      color: Colors.grey),
                                                 ),
-                                                height: 45,
                                               ),
-                                              dropdownStyleData:
-                                                  const DropdownStyleData(
-                                                maxHeight: 200,
-                                              ),
-                                              menuItemStyleData:
-                                                  const MenuItemStyleData(
-                                                height: 45,
-                                              ),
-                                              dropdownSearchData:
-                                                  DropdownSearchData(
-                                                // searchController: customer,
-                                                searchInnerWidgetHeight: 50,
-                                                searchInnerWidget: Container(
-                                                  height: 50,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      vertical: 8,
-                                                      horizontal: 8),
-                                                  child: TextFormField(
-                                                    expands: true,
-                                                    maxLines: null,
-                                                    // controller: customer,
-                                                    onChanged: (searchValue) {
-                                                      setInnerState(() {
-                                                        filteredCustomers = customers
-                                                            .where((item) => item
-                                                                .customerName!
-                                                                .toLowerCase()
-                                                                .contains(
-                                                                    searchValue
-                                                                        .toLowerCase()))
-                                                            .toList();
-                                                      });
-                                                    },
-                                                    decoration: InputDecoration(
-                                                      isDense: true,
-                                                      contentPadding:
-                                                          const EdgeInsets
-                                                              .symmetric(
-                                                              horizontal: 10,
-                                                              vertical: 8),
-                                                      hintText:
-                                                          'Search for a Customer...',
-                                                      hintStyle:
-                                                          const TextStyle(
-                                                              fontSize: 12),
-                                                      border:
-                                                          OutlineInputBorder(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8),
-                                                      ),
+                                              height: 45,
+                                            ),
+                                            dropdownStyleData:
+                                                const DropdownStyleData(
+                                              maxHeight: 200,
+                                            ),
+                                            menuItemStyleData:
+                                                const MenuItemStyleData(
+                                              height: 45,
+                                            ),
+                                            dropdownSearchData:
+                                                DropdownSearchData(
+                                              // searchController: customer,
+                                              searchInnerWidgetHeight: 50,
+                                              searchInnerWidget: Container(
+                                                height: 50,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8,
+                                                        horizontal: 8),
+                                                child: TextFormField(
+                                                  expands: true,
+                                                  maxLines: null,
+                                                  // controller: customer,
+                                                  onChanged: (searchValue) {
+                                                    setInnerState(() {
+                                                      filteredCustomers = customers
+                                                          .where((item) => item
+                                                              .customerName!
+                                                              .toLowerCase()
+                                                              .contains(searchValue
+                                                                  .toLowerCase()))
+                                                          .toList();
+                                                    });
+                                                  },
+                                                  decoration: InputDecoration(
+                                                    isDense: true,
+                                                    contentPadding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 8),
+                                                    hintText:
+                                                        'Search for a Customer...',
+                                                    hintStyle: const TextStyle(
+                                                        fontSize: 12),
+                                                    border: OutlineInputBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
                                                     ),
                                                   ),
                                                 ),
                                               ),
-                                            );
-                                          },
-                                        ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ),
-                                  );
-                                }
-                              },
-                            ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                             const SizedBox(width: 10),
                             FutureBuilder<ProductModel>(
                               future: futureProducts,
@@ -849,40 +853,40 @@ class _DetailScreenState extends State<DetailScreen> {
                   onPressed: () {
                     print('Button Pressed!');
                   },
-                  child: Text('Add'),
+                  child: Text('Add Data'),
                 ),
 
                 SizedBox(
                   height: 20,
                 ),
-                SizedBox(
-                  height: 300,
-                  child: FutureBuilder<CodeModel>(
-                    future: fetchData(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Center(child: Text("Error: ${snapshot.error}"));
-                      } else if (!snapshot.hasData || snapshot.data!.booked_order == null) {
-                        return Center(child: Text("No Data Available"));
-                      } else {
-                        final confirmData = snapshot.data!.booked_order!;
-                        return ListView.builder(
-                          itemCount: confirmData.length,
-                          itemBuilder: (context, index) {
-                            final item = confirmData[index];
-                            return ListTile(
-                              title: Text(item.product ?? "Unknown Product"),
-                              subtitle: Text("Price: ${item.price} | Qty: ${item.qty}"),
-                              trailing: Text(item.newCode ?? "No Code"),
-                            );
-                          },
-                        );
-                      }
-                    },
-                  ),
-                ),
+                // SizedBox(
+                //   height: 300,
+                //   child: FutureBuilder<OrderModel>(
+                //     future: fetchData(),
+                //     builder: (context, snapshot) {
+                //       if (snapshot.connectionState == ConnectionState.waiting) {
+                //         return Center(child: CircularProgressIndicator());
+                //       } else if (snapshot.hasError) {
+                //         return Center(child: Text("Error: ${snapshot.error}"));
+                //       } else if (!snapshot.hasData || snapshot.data!.order == null) {
+                //         return Center(child: Text("No Data Available"));
+                //       } else {
+                //         final confirmData = snapshot.data!.order;
+                //         return ListView.builder(
+                //           itemCount: confirmData!.length,
+                //           itemBuilder: (context, index) {
+                //             final item = confirmData[index];
+                //             return ListTile(
+                //               title: Text(item.product ?? "Unknown Product"),
+                //               subtitle: Text("Price: ${item.price} | Qty: ${item.quantity}"),
+                //               trailing: Text(item.codes ?? "No Code"),
+                //             );
+                //           },
+                //         );
+                //       }
+                //     },
+                //   ),
+                // ),
               ],
             ),
           ),

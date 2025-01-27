@@ -1,6 +1,5 @@
 
 class UserModel {
-  final int bookerCode;
   final String bookerName;
   final String bookerEmail;
   final String bookerContact;
@@ -8,7 +7,6 @@ class UserModel {
   final String newcode;
 
   UserModel({
-    required this.bookerCode,
     required this.bookerName,
     required this.bookerEmail,
     required this.bookerContact,
@@ -18,7 +16,6 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      bookerCode: int.parse(json["BookerCode"].toString()),
       bookerName: json["BookerName"],
       bookerEmail: json["BookerEmail"],
       bookerContact: json["BookerContact"],

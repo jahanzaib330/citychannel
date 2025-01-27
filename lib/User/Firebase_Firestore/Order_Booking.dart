@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../Models/user_model.dart';
 import '../../Providers/user_provider.dart';
 import 'Detail_Screen.dart';
+import 'Fetch_Order.dart';
 
 class OrderBooking extends StatefulWidget {
   const OrderBooking({super.key});
@@ -60,6 +61,7 @@ class _OrderBookingState extends State<OrderBooking> {
       showError("An error occurred: $e");
     }
   }
+
   void showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -71,7 +73,9 @@ class _OrderBookingState extends State<OrderBooking> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) =>  DetailScreen(user: user,),
+          builder: (context) => DetailScreen(
+            user: user,
+          ),
         ),
       );
     }
@@ -83,13 +87,12 @@ class _OrderBookingState extends State<OrderBooking> {
 
     Future<void> logout() async {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', false);
+      await prefs.clear();
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const UserLogin()),
       );
     }
-
 
     return Scaffold(
       backgroundColor: Colors.blueAccent,
@@ -122,7 +125,12 @@ class _OrderBookingState extends State<OrderBooking> {
             ListTile(
               leading: const Icon(Icons.home),
               title: const Text("Home"),
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrderBooking()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.production_quantity_limits),
@@ -132,7 +140,12 @@ class _OrderBookingState extends State<OrderBooking> {
             ListTile(
               leading: const Icon(Icons.book),
               title: const Text("Order Summary"),
-              onTap: () {},
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FetchOrder()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.upload),
@@ -144,13 +157,11 @@ class _OrderBookingState extends State<OrderBooking> {
               title: const Text("Delete Order"),
               onTap: () {},
             ),
-      ListTile(
-        leading: const Icon(Icons.logout),
-        title: const Text("Logout"),
-        onTap: logout
-      )
-
-      ],
+            ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text("Logout"),
+                onTap: logout)
+          ],
         ),
       ),
       body: SingleChildScrollView(
@@ -180,7 +191,7 @@ class _OrderBookingState extends State<OrderBooking> {
                           ? const Center(child: Text("No user logged in"))
                           : TextFormField(
                               controller: _nameController
-                                ..text = user.bookerName,
+                                ..text = user.bookerName ?? "No user",
                               decoration: InputDecoration(
                                 filled: true,
                                 fillColor: Colors.blueAccent.withOpacity(0.1),
@@ -201,7 +212,9 @@ class _OrderBookingState extends State<OrderBooking> {
                             ),
                       const SizedBox(height: 20),
                       TextFormField(
-                        controller: _codeController ..text = user!.newcode,
+                        controller: _codeController
+                          ..text = user?.newcode ??
+                              "no code", // Use null-aware operator
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.blueAccent.withOpacity(0.1),
@@ -223,14 +236,10 @@ class _OrderBookingState extends State<OrderBooking> {
                           return null;
                         },
                       ),
-                      DropdownButtonFormField(
-                          items: [], onChanged: (item) {
-                      // selectedItem = item;
-                          }),
                       const SizedBox(height: 30),
                       ElevatedButton(
-                        onPressed: (){
-                          _bookOrder(user);
+                        onPressed: () {
+                          _bookOrder(user!);
                         },
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../../Models/user_model.dart';
@@ -51,66 +50,70 @@ class _UserLoginState extends State<UserLogin> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  Future<void> loginUserNow() async {
-    const String uri =
-        "http://localhost/City_Channel_AdminPanel/City_Admin/City_Channel_Api/bookers/login.php";
+Future<void> loginUserNow() async {
+  const String uri =
+      "http://localhost/City_Channel_AdminPanel/City_Admin/City_Channel_Api/bookers/login.php";
 
-    try {
-      var res = await http.post(
-        Uri.parse(uri),
-        body: {
-          "BookerEmail": _emailController.text.trim(),
-          "BookerPassword": _passwordController.text.trim(),
-        },
-      );
+  try {
+    var res = await http.post(
+      Uri.parse(uri),
+      body: {
+        "BookerEmail": _emailController.text.trim(),
+        "BookerPassword": _passwordController.text.trim(),
+      },
+    );
 
-      if (res.statusCode == 200) {
-        var resBodyOfLogin = jsonDecode(res.body);
+    if (res.statusCode == 200) {
+      var resBodyOfLogin = jsonDecode(res.body);
 
-        if (resBodyOfLogin['success'] == true) {
-          UserModel userInfo = UserModel.fromJson(resBodyOfLogin["userData"]);
+      if (resBodyOfLogin['success'] == true) {
+        UserModel userInfo = UserModel.fromJson(resBodyOfLogin["userData"]);
 
-          Provider.of<UserProvider>(context, listen: false).setUser(userInfo);
+        // Update Provider before navigating
+        Provider.of<UserProvider>(context, listen: false).setUser(userInfo);
 
-          // Save login state
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("You are logged in successfully!"),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("You are logged in successfully!"),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const OrderBooking()),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Incorrect Credentials. Please try again."),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OrderBooking(),
+          ),
+        );
       } else {
-        throw Exception("Failed to connect to server.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Incorrect Credentials. Please try again."),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("An error occurred: $e"),
+        const SnackBar(
+          content: Text("Error connecting to server. Please try later."),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: Duration(seconds: 3),
         ),
       );
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("An error occurred: $e"),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
-
+}
 
   @override
   void dispose() {
